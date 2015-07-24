@@ -1,7 +1,7 @@
 .. -*- rst -*-
 
-IOrient
-=======
+.. image:: https://raw.githubusercontent.com/lebedov/iorient/master/iorient.png
+    :alt: iorient
 
 Package Description
 -------------------
