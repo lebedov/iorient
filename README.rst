@@ -44,17 +44,19 @@ Multiple connections to different databases may be opened. Once a connection has
 been established, it can be used by specifying its user and database name: ::
 
     %%orient user@dbname
-    SELECT * from V
+    SELECT * FROM V
 
 Once at least one connection has been opened, specifying a query without a
 connection string will use the last used connection: ::
 
     %orient SELECT * FROM V
 
-Query results are displayed in tabular form by default. To pretty print the
-results, use the `-j` option: ::
+Query results may be displayed in tabular format using the `oview` magic
+command; to display results using Python's `pprint` module (which is useful for
+examining JSON data structures), use the `-j` option: ::
 
-    %orient -j SELECT * FROM V
+    r = %orient SELECT * FROM V
+    %oview -j r
 
 Development
 -----------

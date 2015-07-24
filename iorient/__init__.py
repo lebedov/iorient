@@ -21,7 +21,7 @@ def show_json(results):
     """
 
     for r in results:
-        pprint.pprint(r.oRecordData)
+        pprint.pprint(r)
 
 def show_table(results, max_len=25):
     """
@@ -30,18 +30,18 @@ def show_table(results, max_len=25):
 
     cols = set()
     for r in results:
-        cols.update(r.oRecordData.keys())
+        cols.update(r.keys())
     p = prettytable.PrettyTable(cols)
     for r in results:
         row = []
         for k in cols:
-            if r.oRecordData.has_key(k):
-                if type(r.oRecordData[k]) == pyorient.types.OrientBinaryObject:
-                    s = '<OrientBinaryObject @ %s>' % hex(r.oRecordData[k].__hash__())
-                elif type(r.oRecordData[k]) == pyorient.types.OrientRecordLink:
-                    s = '%s' % r.oRecordData[k].get_hash()
+            if r.has_key(k):
+                if type(r[k]) == pyorient.types.OrientBinaryObject:
+                    s = '<OrientBinaryObject @ %s>' % hex(r[k].__hash__())
+                elif type(r[k]) == pyorient.types.OrientRecordLink:
+                    s = '%s' % r[k].get_hash()
                 else:
-                    s = str(r.oRecordData[k])
+                    s = str(r[k])
             else:
                 s = ''
             if len(s) < max_len:
@@ -54,11 +54,6 @@ def show_table(results, max_len=25):
 def parse(cell, self):
     # Set posix=False to preserve quote characters:
     opts, cell = self.parse_options(cell, 'j', posix=False)
-
-    if opts.has_key('j'):
-        display = 'json'
-    else:
-        display = 'table'
 
     server = 'localhost'
     db_name = ''
@@ -114,8 +109,7 @@ def parse(cell, self):
         is_query = True
 
     return {'server': server, 'db_name': db_name, 'port': port,
-            'user': user, 'passwd': passwd, 'cmd': cmd, 'is_query': is_query, 
-            'display': display}
+            'user': user, 'passwd': passwd, 'cmd': cmd, 'is_query': is_query}
 
 @magics_class
 class OrientMagic(Magics, Configurable):
@@ -144,12 +138,6 @@ class OrientMagic(Magics, Configurable):
 
         %%orient user@dbname
         select from v
-
-        # Display results as table:
-        %orient select from v
-
-        # Display results using pretty print:
-        %orient -j select from v
         """
 
         parsed = parse('%s\n%s' % (line, cell), self)
@@ -171,14 +159,41 @@ class OrientMagic(Magics, Configurable):
         if parsed['cmd']:
             if parsed['is_query']:
                 results = client.query(parsed['cmd'])
-                if parsed['display'] == 'json':
-                    show_json(results)
-                else:
-                    show_table(results)
                 return [r.oRecordData for r in results]
             else:
                 client.command(parsed['cmd'])
 
+    @line_magic
+    def oview(self, line):
+        """
+        View results of OrientDB query.
+
+        Examples
+        --------
+        # Display results as table:
+        r = %orient select from v
+        %oview r
+
+        # Display results using pretty print:
+        %oview -j r
+
+        # Display several results variables consecutively:
+        a = %orient select from v where x < 3
+        b = %orient select from v where y > 4
+        %oview a b
+        """
+
+        # Set posix=False to preserve quote characters:
+        opts, line = self.parse_options(line, 'j', posix=False)
+
+        results = [self.shell.user_ns[r] for r in line.split()]
+        if opts.has_key('j'):
+            for r in results:
+                show_json(r)
+        else:
+            for r in results:
+                show_table(r)
+        
     def __del__(self):
 
         # Cleanly shut down all database connections:
