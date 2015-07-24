@@ -51,9 +51,9 @@ connection string will use the last used connection: ::
 
     %orient SELECT * FROM V
 
-Query results may be displayed in tabular format using the `oview` magic
-command; to display results using Python's `pprint` module (which is useful for
-examining JSON data structures), use the `-j` option: ::
+Query results may be displayed in tabular format using the ``oview`` magic
+command; to display results using Python's ``pprint`` module (which is useful 
+for examining JSON data structures), use the ``-j`` option: ::
 
     r = %orient SELECT * FROM V
     %oview -j r
