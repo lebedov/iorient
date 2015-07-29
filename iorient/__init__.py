@@ -15,6 +15,26 @@ import prettytable
 import pyorient
 import truncate
 
+def orientrecord_to_dict(r):
+    """
+    Convert a pyorient.types.OrientRecord into a dict.
+    """
+
+    out = {}
+    out['class'] = r._class
+    out['rid'] = r._rid
+    out['version'] = r._version
+    storage = {}
+    if r.oRecordData:
+        for k in r.oRecordData:
+            if isinstance(r.oRecordData[k],
+                    pyorient.types.OrientRecordLink):
+                storage[k] = r.oRecordData[k].get_hash()
+            else:
+                storage[k] = r.oRecordData[k]
+    out['storage'] = storage
+    return out
+
 def show_json(results):
     """
     Display results using prettyprint.
@@ -62,7 +82,7 @@ def parse(cell, self):
     passwd = ''
     cmd = ''
     is_query = False
-    
+
     # Split the line/cell contents into a first string and a remainder:
     parts = [part.strip() for part in cell.split(None, 1)]
 
@@ -97,7 +117,7 @@ def parse(cell, self):
             if len(parts) > 1:
                 cmd = parts[1]
         else:
-        
+
             # No connect string specified:
             cmd = cell
     else:
@@ -130,6 +150,8 @@ class OrientMagic(Magics, Configurable):
         established, the most recently used connection will be used to execute
         the query.
 
+        Query results are returned as a list of dictionaries.
+
         Examples
         --------
         %orient user:passwd@server/dbname
@@ -159,7 +181,7 @@ class OrientMagic(Magics, Configurable):
         if parsed['cmd']:
             if parsed['is_query']:
                 results = client.query(parsed['cmd'])
-                return [r.oRecordData for r in results]
+                return [orientrecord_to_dict(r) for r in results]
             else:
                 client.command(parsed['cmd'])
 
@@ -174,6 +196,9 @@ class OrientMagic(Magics, Configurable):
         r = %orient select from v
         %oview r
 
+        # Set maximum length at which to truncate individual fields:
+        %oview -t 100 r
+
         # Display results using pretty print:
         %oview -j r
 
@@ -184,16 +209,24 @@ class OrientMagic(Magics, Configurable):
         """
 
         # Set posix=False to preserve quote characters:
-        opts, line = self.parse_options(line, 'j', posix=False)
+        opts, line = self.parse_options(line, 'jt:', posix=False)
 
         results = [self.shell.user_ns[r] for r in line.split()]
         if opts.has_key('j'):
             for r in results:
                 show_json(r)
+        elif opts.has_key('t'):
+            try:
+                max_len = int(opts['t'])
+            except:
+                raise ValueError('integer expected')
+            else:
+                for r in results:
+                    show_table(r, max_len)
         else:
             for r in results:
                 show_table(r)
-        
+
     def __del__(self):
 
         # Cleanly shut down all database connections:
