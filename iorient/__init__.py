@@ -73,7 +73,7 @@ def show_table(results, max_len=25):
 
 def parse(cell, self):
     # Set posix=False to preserve quote characters:
-    opts, cell = self.parse_options(cell, 'j', posix=False)
+    opts, cell = self.parse_options(cell, 'g', posix=False)
 
     server = 'localhost'
     db_name = ''
@@ -81,7 +81,7 @@ def parse(cell, self):
     user = ''
     passwd = ''
     cmd = ''
-    is_query = False
+    cmd_type = 'cmd'
 
     # Split the line/cell contents into a first string and a remainder:
     parts = [part.strip() for part in cell.split(None, 1)]
@@ -125,11 +125,16 @@ def parse(cell, self):
         # No connect string specified:
         cmd = cell
 
-    if re.search('^select .*', cmd):
-        is_query = True
+    if opts.has_key('g'):
+        cmd_type = 'gremlin'
+    elif re.search('^select .*', cmd):
+        cmd_type = 'query'
+    else:
+        cmd_type = 'cmd'
 
     return {'server': server, 'db_name': db_name, 'port': port,
-            'user': user, 'passwd': passwd, 'cmd': cmd, 'is_query': is_query}
+            'user': user, 'passwd': passwd, 'cmd': cmd, 
+            'cmd_type': cmd_type}
 
 @magics_class
 class OrientMagic(Magics, Configurable):
@@ -142,13 +147,17 @@ class OrientMagic(Magics, Configurable):
     @cell_magic
     def orient(self, line, cell=''):
         """
-        Runs an OrientDB SQL query against an OrientDB database.
+        Runs an OrientDB query against an OrientDB database.
 
         Multiple database connections are supported. Once a connection has been
         established, it can be used by specifying its user@dbname. If no connect
         string is specified after at least one connection has been
         established, the most recently used connection will be used to execute
         the query.
+
+        Queries are assumed to be in OrientDB SQL. If pyorient supports 
+        execution of Gremlin queries, they may be run by specifying the -g
+        option.
 
         Query results are returned as a list of dictionaries.
 
@@ -160,6 +169,8 @@ class OrientMagic(Magics, Configurable):
 
         %%orient user@dbname
         select from v
+
+        %orient -g user@dbname g.V.has('name', 'foo')
         """
 
         parsed = parse('%s\n%s' % (line, cell), self)
@@ -179,7 +190,12 @@ class OrientMagic(Magics, Configurable):
             self.db[key] = client
 
         if parsed['cmd']:
-            if parsed['is_query']:
+            if parsed['cmd_type'] == 'gremlin':
+                if not hasattr(client, 'gremlin'):
+                    raise RuntimeError('pyorient installation does not support Gremlin')
+                results = client.gremlin(parsed['cmd'])
+                return [orientrecord_to_dict(r) for r in results]
+            elif parsed['cmd_type'] == 'query':
                 results = client.query(parsed['cmd'])
                 return [orientrecord_to_dict(r) for r in results]
             else:
@@ -235,4 +251,3 @@ class OrientMagic(Magics, Configurable):
 
 def load_ipython_extension(ip):
     ip.register_magics(OrientMagic)
-
