@@ -7,7 +7,7 @@ Package Description
 -------------------
 IOrient is an IPython extension for running queries against an `OrientDB
 <https://orientdb.com>`_ graph database within IPython using OrientDB's SQL 
-dialect.
+dialect and `Gremlin <https://gremlin.tinkerpop.com>`_.
 
 ..
    .. image:: https://img.shields.io/pypi/v/iorient.svg
@@ -45,6 +45,10 @@ been established, it can be used by specifying its user and database name: ::
 
     %%orient user@dbname
     SELECT * FROM V
+
+One can also execute Gremlin queries using the ``-g`` option: ::
+
+    %orient -g g.V[0]
 
 Once at least one connection has been opened, specifying a query without a
 connection string will use the last used connection: ::
