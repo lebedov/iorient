@@ -193,11 +193,24 @@ class OrientMagic(Magics, Configurable):
             if parsed['cmd_type'] == 'gremlin':
                 if not hasattr(client, 'gremlin'):
                     raise RuntimeError('pyorient installation does not support Gremlin')
-                results = client.gremlin(parsed['cmd'])
-                return [orientrecord_to_dict(r) for r in results]
+
+                # Wrap Gremlin query in a closure and convert the results to
+                # ODocument instances (if possible) so as to prevent
+                # serialization failure; see http://bit.ly/1hhm06F
+                cmd = ('p = { -> %s}; result = p(); if (result instanceof '
+                'com.tinkerpop.gremlin.groovy.GremlinGroovyPipeline) '
+                '{result.transform{try {new '
+                'com.orientechnologies.orient.core.record.impl.ODocument(it)} '
+                'catch (all) {it}}} else {try {new '
+                'com.orientechnologies.orient.core.record.impl.ODocument(result)} '
+                'catch (all) {result}} ') % parsed['cmd']
+                results = client.gremlin(cmd)
+                return [orientrecord_to_dict(r) if isinstance(r,
+                        pyorient.types.OrientRecord) else r for r in results]
             elif parsed['cmd_type'] == 'query':
                 results = client.query(parsed['cmd'])
-                return [orientrecord_to_dict(r) for r in results]
+                return [orientrecord_to_dict(r) if isinstance(r,
+                        pyorient.types.OrientRecord) else r for r in results]
             else:
                 client.command(parsed['cmd'])
 
