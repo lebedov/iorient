@@ -155,9 +155,8 @@ class OrientMagic(Magics, Configurable):
         established, the most recently used connection will be used to execute
         the query.
 
-        Queries are assumed to be in OrientDB SQL. If pyorient supports 
-        execution of Gremlin queries, they may be run by specifying the -g
-        option.
+        Queries are assumed to be in OrientDB SQL. Gremlin queries 
+        may be run by specifying the -g option.
 
         Query results are returned as a list of dictionaries.
 
@@ -191,8 +190,6 @@ class OrientMagic(Magics, Configurable):
 
         if parsed['cmd']:
             if parsed['cmd_type'] == 'gremlin':
-                if not hasattr(client, 'gremlin'):
-                    raise RuntimeError('pyorient installation does not support Gremlin')
 
                 # Wrap Gremlin query in a closure and convert the results to
                 # ODocument instances (if possible) so as to prevent

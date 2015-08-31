@@ -21,9 +21,7 @@ Installation
 ------------
 The package may be installed as follows: ::
 
-    pip install -e git+https://github.com/lebedov/iorient
-
-..    pip install iorient
+    pip install iorient
 
 After installation, the extension may be loaded within an IPython session
 with ::
