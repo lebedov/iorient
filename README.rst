@@ -9,13 +9,12 @@ IOrient is an IPython extension for running queries against an `OrientDB
 <https://orientdb.com>`_ graph database within IPython using OrientDB's SQL 
 dialect and `Gremlin <https://gremlin.tinkerpop.com>`_.
 
-..
-   .. image:: https://img.shields.io/pypi/v/iorient.svg
-       :target: https://pypi.python.org/pypi/iorient
-       :alt: Latest Version
-   .. image:: https://img.shields.io/pypi/dm/iorient.svg
-       :target: https://pypi.python.org/pypi/iorient
-       :alt: Downloads
+.. image:: https://img.shields.io/pypi/v/iorient.svg
+    :target: https://pypi.python.org/pypi/iorient
+    :alt: Latest Version
+.. image:: https://img.shields.io/pypi/dm/iorient.svg
+    :target: https://pypi.python.org/pypi/iorient
+    :alt: Downloads
 
 Installation
 ------------
