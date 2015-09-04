@@ -191,16 +191,23 @@ class OrientMagic(Magics, Configurable):
         if parsed['cmd']:
             if parsed['cmd_type'] == 'gremlin':
 
-                # Wrap Gremlin query in a closure and convert the results to
-                # ODocument instances (if possible) so as to prevent
-                # serialization failure; see http://bit.ly/1hhm06F
-                cmd = ('p = { -> %s}; result = p(); if (result instanceof '
-                'com.tinkerpop.gremlin.groovy.GremlinGroovyPipeline) '
-                '{result.transform{try {new '
-                'com.orientechnologies.orient.core.record.impl.ODocument(it)} '
-                'catch (all) {it}}} else {try {new '
-                'com.orientechnologies.orient.core.record.impl.ODocument(result)} '
-                'catch (all) {result}} ') % parsed['cmd']
+                # Try wrapping Gremlin queries in a pipeline and/or closure to
+                # convert the results to ODocument instances (if possible) so as
+                # to prevent serialization failure; see http://bit.ly/1hhm06F
+                cmd = """
+def make_doc = {x -> new com.orientechnologies.orient.core.record.impl.ODocument(x)};
+p = { -> %s}; result = p();
+try {make_doc(result)}
+catch (all) {
+if (result instanceof GremlinPipeline){
+    result.transform{try {make_doc(it)} catch (a0) {it}}}
+else if (result instanceof Iterable) {
+    try {(new GremlinPipeline()).start(result)}
+    catch (a1) {result}}
+else {
+     (new GremlinPipeline()).start(result).transform{try {make_doc(it)} catch (a2) {it}}}
+}
+""" % parsed['cmd']
                 results = client.gremlin(cmd)
                 return [orientrecord_to_dict(r) if isinstance(r,
                         pyorient.types.OrientRecord) else r for r in results]
