@@ -199,14 +199,14 @@ def make_doc = {x -> new com.orientechnologies.orient.core.record.impl.ODocument
 p = { -> %s}; result = p();
 try {make_doc(result)}
 catch (all) {
-if (result instanceof GremlinPipeline){
+if (result instanceof GremlinGroovyPipeline){
     result.transform{try {make_doc(it)} catch (a0) {it}}}
 else if (result instanceof Iterable) {
-    try {(new GremlinPipeline()).start(result)}
+    try {(new GremlinGroovyPipeline()).start(result)}
     catch (a1) {result}}
 else {
-     (new GremlinPipeline()).start(result).transform{try {make_doc(it)} catch (a2) {it}}}
-}
+     try {(new GremlinGroovyPipeline()).start(result).transform{try {make_doc(it)} catch (a2) {it}}}
+     catch (a3) {result}}}
 """ % parsed['cmd']
                 results = client.gremlin(cmd)
                 return [orientrecord_to_dict(r) if isinstance(r,
