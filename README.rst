@@ -52,6 +52,7 @@ also available: ::
 
     %orient list databases
     %orient list classes
+    %orient create database foobar memory graph
 
 Once at least one connection has been opened, specifying a query without a
 connection string will use the last used connection: ::

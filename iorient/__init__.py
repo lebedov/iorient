@@ -176,6 +176,12 @@ class OrientMagic(Magics, Configurable):
         select from v
 
         %orient -g user@dbname g.V.has('name', 'foo')
+
+        %orient list classes
+
+        %orient list databases
+
+        %orient create database foobar memory graph
         """
 
         parsed = parse('%s\n%s' % (line, cell), self)
@@ -210,6 +216,20 @@ class OrientMagic(Magics, Configurable):
                 results = db_client.query('select name from '
                                           '(select expand(classes) from metadata:schema)')
                 return [r.oRecordData['name'] for r in results]
+            elif parsed['cmd'].startswith('create database'):
+                tokens = re.sub('create database', '',
+                                parsed['cmd']).strip().split()
+                if len(tokens) < 1:
+                    raise ValueError('database name not specified')
+                else:
+                    name = tokens.pop(0)
+                    storage = 'plocal'
+                    db_type = 'graph'
+                    if len(tokens) > 0:
+                        storage = tokens[0]
+                    if len(tokens) > 1:
+                        db_type = tokens[1]
+                    client.db_create(name, db_type, storage)
             elif parsed['cmd_type'] == 'gremlin':
 
                 # Try wrapping Gremlin queries in a pipeline and/or closure to
