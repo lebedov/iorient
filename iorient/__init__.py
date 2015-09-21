@@ -139,8 +139,12 @@ def parse(cell, self):
 @magics_class
 class OrientMagic(Magics, Configurable):
 
-    # Database connections; keys are "user@db_name":
+    # Client connections; keys are "user@db_name":
+    clients = {}
+
+    # Connections to specific databases; keys are "user@db_name":
     db = {}
+
     last_key = ''
 
     @line_magic
@@ -156,7 +160,9 @@ class OrientMagic(Magics, Configurable):
         the query.
 
         Queries are assumed to be in OrientDB SQL. Gremlin queries 
-        may be run by specifying the -g option.
+        may be run by specifying the -g option. Several special commands similar
+        to those provided by the OrientDB console (such as 'list databases')
+        are also recognized.
 
         Query results are returned as a list of dictionaries.
 
@@ -181,15 +187,26 @@ class OrientMagic(Magics, Configurable):
             key = self.last_key
 
         if key in self.db:
-            client = self.db[key]
+            client = self.clients[key]
+            db_client = self.db[key]
         else:
+            db_client = pyorient.OrientDB(parsed['server'], parsed['port'])
+            db_client.connect(parsed['user'], parsed['passwd'])
+            db_client.db_open(parsed['db_name'], parsed['user'], parsed['passwd'])
+            self.db[key] = db_client
+
             client = pyorient.OrientDB(parsed['server'], parsed['port'])
             client.connect(parsed['user'], parsed['passwd'])
-            client.db_open(parsed['db_name'], parsed['user'], parsed['passwd'])
-            self.db[key] = client
+            self.clients[key] = client
 
         if parsed['cmd']:
-            if parsed['cmd_type'] == 'gremlin':
+            if parsed['cmd'] == 'list databases':
+                r = client.db_list()
+                if r:
+                    return r.oRecordData['databases']
+                else:
+                    return {}
+            elif parsed['cmd_type'] == 'gremlin':
 
                 # Try wrapping Gremlin queries in a pipeline and/or closure to
                 # convert the results to ODocument instances (if possible) so as
@@ -208,15 +225,15 @@ else {
      try {(new GremlinGroovyPipeline()).start(result).transform{try {make_doc(it)} catch (a2) {it}}}
      catch (a3) {result}}}
 """ % parsed['cmd']
-                results = client.gremlin(cmd)
+                results = db_client.gremlin(cmd)
                 return [orientrecord_to_dict(r) if isinstance(r,
                         pyorient.types.OrientRecord) else r for r in results]
             elif parsed['cmd_type'] == 'query':
-                results = client.query(parsed['cmd'])
+                results = db_client.query(parsed['cmd'])
                 return [orientrecord_to_dict(r) if isinstance(r,
                         pyorient.types.OrientRecord) else r for r in results]
             else:
-                client.command(parsed['cmd'])
+                db_client.command(parsed['cmd'])
 
     @line_magic
     def oview(self, line):
@@ -262,9 +279,11 @@ else {
 
     def __del__(self):
 
-        # Cleanly shut down all database connections:
-        for client in self.db:
-            client.db_close()
+        # Cleanly shut down all connections:
+        for db_client in self.db:
+            db_client.db_close()
+        for client in self.clients:
+            client.shutdown()
 
 def load_ipython_extension(ip):
     ip.register_magics(OrientMagic)
