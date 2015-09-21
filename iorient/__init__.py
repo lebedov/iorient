@@ -161,8 +161,8 @@ class OrientMagic(Magics, Configurable):
 
         Queries are assumed to be in OrientDB SQL. Gremlin queries 
         may be run by specifying the -g option. Several special commands similar
-        to those provided by the OrientDB console (such as 'list databases')
-        are also recognized.
+        to those provided by the OrientDB console (such as 'list databases',
+        'list classes', etc.) are also recognized.
 
         Query results are returned as a list of dictionaries.
 
@@ -206,6 +206,10 @@ class OrientMagic(Magics, Configurable):
                     return r.oRecordData['databases']
                 else:
                     return {}
+            elif parsed['cmd'] == 'list classes':
+                results = db_client.query('select name from '
+                                          '(select expand(classes) from metadata:schema)')
+                return [r.oRecordData['name'] for r in results]
             elif parsed['cmd_type'] == 'gremlin':
 
                 # Try wrapping Gremlin queries in a pipeline and/or closure to

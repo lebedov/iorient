@@ -47,6 +47,12 @@ One can also execute Gremlin queries using the ``-g`` option: ::
 
     %orient -g g.V[0]
 
+Several special commands similar to those provided by the OrientDB console are
+also available: ::
+
+    %orient list databases
+    %orient list classes
+
 Once at least one connection has been opened, specifying a query without a
 connection string will use the last used connection: ::
 
