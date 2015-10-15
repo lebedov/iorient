@@ -8,8 +8,13 @@
 import pprint
 import re
 
+import IPython
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic
-from IPython.config.configurable import Configurable
+
+if IPython.release.version < '4.0.0':
+    from IPython.config.configurable import Configurable
+else:
+    from traitlets.config import Configurable
 
 import prettytable
 import pyorient
