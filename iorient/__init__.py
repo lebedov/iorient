@@ -22,7 +22,7 @@ import truncate
 
 def orientrecord_to_dict(r):
     """
-    Convert a pyorient.types.OrientRecord into a dict.
+    Convert a pyorient.otypes.OrientRecord into a dict.
     """
 
     out = {}
@@ -33,7 +33,7 @@ def orientrecord_to_dict(r):
     if r.oRecordData:
         for k in r.oRecordData:
             if isinstance(r.oRecordData[k],
-                    pyorient.types.OrientRecordLink):
+                    pyorient.otypes.OrientRecordLink):
                 storage[k] = r.oRecordData[k].get_hash()
             else:
                 storage[k] = r.oRecordData[k]
@@ -61,9 +61,9 @@ def show_table(results, max_len=25):
         row = []
         for k in cols:
             if r.has_key(k):
-                if type(r[k]) == pyorient.types.OrientBinaryObject:
+                if type(r[k]) == pyorient.otypes.OrientBinaryObject:
                     s = '<OrientBinaryObject @ %s>' % hex(r[k].__hash__())
-                elif type(r[k]) == pyorient.types.OrientRecordLink:
+                elif type(r[k]) == pyorient.otypes.OrientRecordLink:
                     s = '%s' % r[k].get_hash()
                 else:
                     s = str(r[k])
@@ -164,7 +164,7 @@ class OrientMagic(Magics, Configurable):
         established, the most recently used connection will be used to execute
         the query.
 
-        Queries are assumed to be in OrientDB SQL. Gremlin queries 
+        Queries are assumed to be in OrientDB SQL. Gremlin queries
         may be run by specifying the -g option. Several special commands similar
         to those provided by the OrientDB console (such as 'list databases',
         'list classes', etc.) are also recognized.
@@ -256,11 +256,11 @@ else {
 """ % parsed['cmd']
                 results = db_client.gremlin(cmd)
                 return [orientrecord_to_dict(r) if isinstance(r,
-                        pyorient.types.OrientRecord) else r for r in results]
+                        pyorient.otypes.OrientRecord) else r for r in results]
             elif parsed['cmd_type'] == 'query':
                 results = db_client.query(parsed['cmd'])
                 return [orientrecord_to_dict(r) if isinstance(r,
-                        pyorient.types.OrientRecord) else r for r in results]
+                        pyorient.otypes.OrientRecord) else r for r in results]
             else:
                 db_client.command(parsed['cmd'])
 
