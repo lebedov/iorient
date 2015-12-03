@@ -51,5 +51,5 @@ if __name__ == "__main__":
         packages = PACKAGES,
         install_requires = ['ipython>=1.0',
                             'prettytable>=0.7.2',
-                            'pyorient>=1.4.6',
+                            'pyorient>=1.4.4',
                             'truncate>=0.11'])

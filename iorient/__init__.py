@@ -16,6 +16,11 @@ if IPython.release.version < '4.0.0':
 else:
     from traitlets.config import Configurable
 
+try:
+    from pyorient.types import OrientBinaryObject, OrientRecordLink
+except ImportError:
+    from pyorient.otypes import OrientBinaryObject, OrientRecordLink 
+
 import prettytable
 import pyorient
 import truncate
@@ -32,8 +37,7 @@ def orientrecord_to_dict(r):
     storage = {}
     if r.oRecordData:
         for k in r.oRecordData:
-            if isinstance(r.oRecordData[k],
-                    pyorient.otypes.OrientRecordLink):
+            if isinstance(r.oRecordData[k], OrientRecordLink):
                 storage[k] = r.oRecordData[k].get_hash()
             else:
                 storage[k] = r.oRecordData[k]
@@ -48,7 +52,7 @@ def show_json(results):
     for r in results:
         pprint.pprint(r)
 
-def show_table(results, max_len=25):
+def show_table(results, resultsmax_len=25):
     """
     Display results of PyOrient query as a table.
     """
@@ -61,9 +65,9 @@ def show_table(results, max_len=25):
         row = []
         for k in cols:
             if r.has_key(k):
-                if type(r[k]) == pyorient.otypes.OrientBinaryObject:
+                if type(r[k]) == OrientBinaryObject:
                     s = '<OrientBinaryObject @ %s>' % hex(r[k].__hash__())
-                elif type(r[k]) == pyorient.otypes.OrientRecordLink:
+                elif type(r[k]) == OrientRecordLink:
                     s = '%s' % r[k].get_hash()
                 else:
                     s = str(r[k])
