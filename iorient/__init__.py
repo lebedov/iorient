@@ -52,7 +52,7 @@ def show_json(results):
     for r in results:
         pprint.pprint(r)
 
-def show_table(results, resultsmax_len=25):
+def show_table(results, max_len=25):
     """
     Display results of PyOrient query as a table.
     """
@@ -82,7 +82,7 @@ def show_table(results, resultsmax_len=25):
 
 def parse(cell, self):
     # Set posix=False to preserve quote characters:
-    opts, cell = self.parse_options(cell, 'g', posix=False)
+    opts, cell = self.parse_options(cell, 'gjt:', posix=False)
 
     server = 'localhost'
     db_name = ''
@@ -91,6 +91,7 @@ def parse(cell, self):
     passwd = ''
     cmd = ''
     cmd_type = 'cmd'
+    display = ()
 
     # Split the line/cell contents into a first string and a remainder:
     parts = [part.strip() for part in cell.split(None, 1)]
@@ -134,6 +135,15 @@ def parse(cell, self):
         # No connect string specified:
         cmd = cell
 
+    if opts.has_key('j'):
+        display = ('json',)
+    elif opts.has_key('t'):
+        try:
+            max_len = int(opts['t'])
+        except:
+            raise ValueError('integer expected')
+        else:
+            display = ('table', max_len)
     if opts.has_key('g'):
         cmd_type = 'gremlin'
     elif re.search('^select .*', cmd):
@@ -143,7 +153,7 @@ def parse(cell, self):
 
     return {'server': server, 'db_name': db_name, 'port': port,
             'user': user, 'passwd': passwd, 'cmd': cmd, 
-            'cmd_type': cmd_type}
+            'cmd_type': cmd_type, 'display': display}
 
 @magics_class
 class OrientMagic(Magics, Configurable):
@@ -169,12 +179,15 @@ class OrientMagic(Magics, Configurable):
         the query.
 
         Queries are assumed to be in OrientDB SQL. Gremlin queries
-        may be run by specifying the -g option. Several special commands similar
+        may be run by specifying the '-g' option. Several special commands similar
         to those provided by the OrientDB console (such as 'list databases',
         'list classes', etc.) are also recognized.
 
-        Query results are returned as a list of dictionaries.
-
+        Query results are returned as a list of dictionaries. Specifying the
+        options '-j' or '-t N' (where 'N' is an integer) will respectively print 
+        the results in JSON or tabular format (with a maximum field width of 'N'
+        characters) rather than returning them.
+        
         Examples
         --------
         %orient user:passwd@server/dbname
@@ -191,6 +204,14 @@ class OrientMagic(Magics, Configurable):
         %orient list databases
 
         %orient create database foobar memory graph
+
+        persons =  %orient select * from persons
+
+        %orient -t 100 select * from persons
+
+        See Also
+        --------
+        %oview - View results of OrientDB query.
         """
 
         parsed = parse('%s\n%s' % (line, cell), self)
@@ -214,17 +235,18 @@ class OrientMagic(Magics, Configurable):
             client.connect(parsed['user'], parsed['passwd'])
             self.clients[key] = client
 
+        results = None
         if parsed['cmd']:
             if parsed['cmd'] == 'list databases':
                 r = client.db_list()
                 if r:
-                    return r.oRecordData['databases']
+                    results = r.oRecordData['databases']
                 else:
-                    return {}
+                    results = {}
             elif parsed['cmd'] == 'list classes':
                 results = db_client.query('select name from '
                                           '(select expand(classes) from metadata:schema)')
-                return [r.oRecordData['name'] for r in results]
+                results = [r.oRecordData['name'] for r in results]
             elif parsed['cmd'].startswith('create database'):
                 tokens = re.sub('create database', '',
                                 parsed['cmd']).strip().split()
@@ -259,14 +281,21 @@ else {
      catch (a3) {result}}}
 """ % parsed['cmd']
                 results = db_client.gremlin(cmd)
-                return [orientrecord_to_dict(r) if isinstance(r,
-                        pyorient.otypes.OrientRecord) else r for r in results]
+                results = [orientrecord_to_dict(r) if isinstance(r,
+                           pyorient.otypes.OrientRecord) else r for r in results]
             elif parsed['cmd_type'] == 'query':
                 results = db_client.query(parsed['cmd'])
-                return [orientrecord_to_dict(r) if isinstance(r,
-                        pyorient.otypes.OrientRecord) else r for r in results]
+                results = [orientrecord_to_dict(r) if isinstance(r,
+                           pyorient.otypes.OrientRecord) else r for r in results]
             else:
                 db_client.command(parsed['cmd'])
+        if parsed['display'] and results is not None:
+            if parsed['display'][0] == 'json':
+                show_json(results)
+            elif parsed['display'][0] == 'table':
+                show_table(results, parsed['display'][1])
+        else:
+            return results
 
     @line_magic
     def oview(self, line):
