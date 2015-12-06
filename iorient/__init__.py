@@ -57,11 +57,11 @@ def show_table(results, max_len=25):
     Display results of PyOrient query as a table.
     """
 
-    cols = set()
+    cols = set('#')
     for r in results:
         cols.update(r.keys())
     p = prettytable.PrettyTable(cols)
-    for r in results:
+    for i, r in enumerate(results):
         row = []
         for k in cols:
             if r.has_key(k):
@@ -71,6 +71,8 @@ def show_table(results, max_len=25):
                     s = '%s' % r[k].get_hash()
                 else:
                     s = str(r[k])
+            elif k == '#':
+                s = str(i)
             else:
                 s = ''
             if len(s) < max_len:
