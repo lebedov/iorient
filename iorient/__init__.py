@@ -57,20 +57,53 @@ def show_table(results, max_len=25):
     Display results of PyOrient query as a table.
     """
 
-    cols = set('#')
+    def to_str(obj):
+        if isinstance(obj, OrientBinaryObject):
+            s = '<OrientBinaryObject @ %s>' % hex(obj.__hash__())
+        elif isinstance(obj, OrientRecordLink):
+            s = '%s' % obj.get_hash()
+        else:
+            s = str(obj)
+        return s
+
+    # Find keys in record; look inside r['storage'] because it may contain more keys:
+    # XXX this approach might post problems if a record contains a property
+    # called 'class', 'storage', or 'rid':
+    cols = set()
     for r in results:
-        cols.update(r.keys())
+        keys = r.keys()
+        if 'storage' in keys:
+            keys.remove('storage')
+            keys.extend(r['storage'].keys())
+        cols.update(keys)
+
+    # Don't print the version:
+    try:
+        cols.remove('version')
+    except:
+        pass
+
+    # Add header for row number column:
+    cols_list = ['#']
+
+    # Rearrange columns to print RID and class first:
+    if 'rid' in cols:
+        cols_list.append('rid')
+        cols.remove('rid')
+    if 'class' in cols:
+        cols_list.append('class')
+        cols.remove('class')
+    cols_list.extend(cols)
+    cols = cols_list
+
     p = prettytable.PrettyTable(cols)
     for i, r in enumerate(results):
         row = []
         for k in cols:
             if r.has_key(k):
-                if type(r[k]) == OrientBinaryObject:
-                    s = '<OrientBinaryObject @ %s>' % hex(r[k].__hash__())
-                elif type(r[k]) == OrientRecordLink:
-                    s = '%s' % r[k].get_hash()
-                else:
-                    s = str(r[k])
+                s = to_str(r[k])
+            elif r['storage'].has_key(k):
+                s = to_str(r['storage'][k])
             elif k == '#':
                 s = str(i)
             else:
