@@ -145,18 +145,13 @@ def parse(cell, self):
             if r:
                 new_server, new_port, new_db_name = r.groups()
 
-                # user[:password]@db_name
-                if not new_port and not new_db_name:
-                    db_name = new_server
-
-                # user[:password]@server[:port]/db_name
-                else:
-                    if new_server:
-                        server = new_server
-                    if new_port:
-                        port = int(new_port)
-                    if new_db_name:
-                        db_name = new_db_name
+                # user[:password]@server[:port][/db_name]
+                if new_server:
+                    server = new_server
+                if new_port:
+                    port = int(new_port)
+                if new_db_name:
+                    db_name = new_db_name
 
             # Query to execute:
             if len(parts) > 1:
@@ -193,13 +188,13 @@ def parse(cell, self):
 @magics_class
 class OrientMagic(Magics, Configurable):
 
-    # Client connections; keys are "user@db_name":
-    clients = {}
+    # Maintain two separate dicts of connections so that client-specific
+    # commands can be executed independently of database-specific commands:
+    clients = {} # client connections; keys are "user@db_name"    
+    db = {}      # connections to specific databases; keys are "user@db_name"
 
-    # Connections to specific databases; keys are "user@db_name":
-    db = {}
-
-    last_key = ''
+    last_client_key = ''
+    last_db_key = ''
 
     @line_magic
     @cell_magic
@@ -208,14 +203,16 @@ class OrientMagic(Magics, Configurable):
         Runs an OrientDB query against an OrientDB database.
 
         Multiple database connections are supported. Once a connection has been
-        established, it can be used by specifying its user@dbname. If no connect
-        string is specified after at least one connection has been
-        established, the most recently used connection will be used to execute
-        the query.
+        established, it can be used by specifying its user@server/dbname. A
+        separate database-independent connection to the server is maintained to 
+        permit server-specific commands without having to subsequently reconnect
+        to the currently open database. If no connect string is specified after
+        at least one connection has been established, the most recently used
+        connection will be used to execute the query.
 
-        Queries are assumed to be in OrientDB SQL. Gremlin queries
-        may be run by specifying the '-g' option. Several special commands similar
-        to those provided by the OrientDB console (such as 'list databases',
+        Queries are assumed to be in OrientDB SQL. Gremlin queries may be run by 
+        specifying the '-g' option. Several special commands similar to those 
+        provided by the OrientDB console (such as 'list databases',
         'list classes', etc.) are also recognized.
 
         Query results are returned as a list of dictionaries. Specifying the
@@ -229,18 +226,25 @@ class OrientMagic(Magics, Configurable):
 
         %orient user:passwd@server:2424/dbname
 
-        %%orient user@dbname
+        %%orient user@server/dbname
         select from v
 
-        %orient -g user@dbname g.V.has('name', 'foo')
+        %orient -g user@server/dbname g.V.has('name', 'foo')
+
+        %orient current server
+
+        %orient current database
 
         %orient list classes
 
         %orient list databases
 
+        %%orient user@server
+        list databases
+
         %orient create database foobar memory graph
 
-        persons =  %orient select * from persons
+        persons = %orient select * from persons
 
         %orient -t 100 select * from persons
 
@@ -251,38 +255,63 @@ class OrientMagic(Magics, Configurable):
 
         parsed = parse('%s\n%s' % (line, cell), self)
 
-        if parsed['user'] and parsed['db_name']:
-            key = parsed['user']+'@'+parsed['db_name']
-            self.last_key = key
+        # Update last user + server:
+        if parsed['user'] and parsed['server']:
+            client_key = parsed['user']+'@'+parsed['server']
+            self.last_client_key = client_key
         else:
-            key = self.last_key
+            client_key = self.last_client_key
 
-        if key in self.db:
-            client = self.clients[key]
-            db_client = self.db[key]
+        # Update last server and db:
+        if parsed['user'] and parsed['server'] and parsed['db_name']:
+            db_key = parsed['user']+'@'+parsed['server'] + '/' + parsed['db_name']
+            self.last_db_key = db_key
         else:
+            db_key = self.last_db_key
+        
+        if client_key in self.clients:
+            client = self.clients[client_key]
+        elif client_key:
+            client = pyorient.OrientDB(parsed['server'], parsed['port'])
+            client.connect(parsed['user'], parsed['passwd'])
+            self.clients[client_key] = client
+        else:
+            client = None
+
+        # If no database name is specified, don't try to connect to any database:
+        if db_key in self.db:            
+            db_client = self.db[db_key]
+        elif db_key:
             db_client = pyorient.OrientDB(parsed['server'], parsed['port'])
             db_client.connect(parsed['user'], parsed['passwd'])
             db_client.db_open(parsed['db_name'], parsed['user'], parsed['passwd'])
-            self.db[key] = db_client
-
-            client = pyorient.OrientDB(parsed['server'], parsed['port'])
-            client.connect(parsed['user'], parsed['passwd'])
-            self.clients[key] = client
+            self.db[db_key] = db_client
+        else:
+            db_client = None
 
         results = None
         if parsed['cmd']:
-            if parsed['cmd'] == 'list databases':
+            if parsed['cmd'] == 'current server':
+                results = self.last_client_key
+            elif parsed['cmd'] == 'current database':
+                results = self.last_db_key
+            elif parsed['cmd'] == 'list databases':
+                if client is None:
+                    raise RuntimeError('no server accessed')
                 r = client.db_list()
                 if r:
                     results = r.oRecordData['databases']
                 else:
                     results = {}
             elif parsed['cmd'] == 'list classes':
+                if db_client is None:
+                    raise RuntimeError('no database opened')
                 results = db_client.query('select name from '
                                           '(select expand(classes) from metadata:schema)')
                 results = [r.oRecordData['name'] for r in results]
             elif parsed['cmd'].startswith('create database'):
+                if client is None:
+                    raise RuntimeError('no server accessed')
                 tokens = re.sub('create database', '',
                                 parsed['cmd']).strip().split()
                 if len(tokens) < 1:
@@ -297,6 +326,8 @@ class OrientMagic(Magics, Configurable):
                         db_type = tokens[1]
                     client.db_create(name, db_type, storage)
             elif parsed['cmd_type'] == 'gremlin':
+                if db_client is None:
+                    raise RuntimeError('no database opened')
 
                 # Try wrapping Gremlin queries in a pipeline and/or closure to
                 # convert the results to ODocument instances (if possible) so as
@@ -319,10 +350,16 @@ else {
                 results = [orientrecord_to_dict(r) if isinstance(r,
                            pyorient.otypes.OrientRecord) else r for r in results]
             elif parsed['cmd_type'] == 'query':
+                if db_client is None:
+                    raise RuntimeError('no database opened')
+
                 results = db_client.query(parsed['cmd'])
                 results = [orientrecord_to_dict(r) if isinstance(r,
                            pyorient.otypes.OrientRecord) else r for r in results]
             else:
+                if db_client is None:
+                    raise RuntimeError('no database opened')
+
                 db_client.command(parsed['cmd'])
         if parsed['display'] and results is not None:
             if parsed['display'][0] == 'json':
