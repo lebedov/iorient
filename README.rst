@@ -38,9 +38,9 @@ Same as above, but also specify the port: ::
     %orient user:passwd@localhost:2424/dbname
 
 Multiple connections to different databases may be opened. Once a connection has 
-been established, it can be used by specifying its user and database name: ::
+been established, it can be used by specifying its user, server, and database name: ::
 
-    %%orient user@dbname
+    %%orient user@server/dbname
     SELECT * FROM V
 
 One can also execute Gremlin queries using the ``-g`` option: ::
@@ -50,6 +50,8 @@ One can also execute Gremlin queries using the ``-g`` option: ::
 Several special commands similar to those provided by the OrientDB console are
 also available: ::
 
+    %orient current server
+    %orient current database
     %orient list databases
     %orient list classes
     %orient create database foobar memory graph
