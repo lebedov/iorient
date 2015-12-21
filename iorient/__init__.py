@@ -226,6 +226,8 @@ class OrientMagic(Magics, Configurable):
 
         %orient user:passwd@server:2424/dbname
 
+        %orient disconnect
+
         %%orient user@server/dbname
         select from v
 
@@ -243,6 +245,8 @@ class OrientMagic(Magics, Configurable):
         list databases
 
         %orient create database foobar memory graph
+
+        %orient drop database foobar
 
         persons = %orient select * from persons
 
@@ -292,9 +296,12 @@ class OrientMagic(Magics, Configurable):
         results = None
         if parsed['cmd']:
             if parsed['cmd'] == 'current server':
-                results = self.last_client_key
+                results = client_key
             elif parsed['cmd'] == 'current database':
-                results = self.last_db_key
+                results = db_key
+            elif parsed['cmd'] == 'disconnect':
+                del self.db[db_key]
+                self.last_db_key = ''
             elif parsed['cmd'] == 'list databases':
                 if client is None:
                     raise RuntimeError('no server accessed')
@@ -309,6 +316,16 @@ class OrientMagic(Magics, Configurable):
                 results = db_client.query('select name from '
                                           '(select expand(classes) from metadata:schema)')
                 results = [r.oRecordData['name'] for r in results]
+            elif parsed['cmd'].startswith('drop database'):
+                if client is None:
+                    raise RuntimeError('no server accessed')
+                tokens = re.sub('drop database', '',
+                                parsed['cmd']).strip().split()
+                if len(tokens) < 1:
+                    raise ValueError('database name not specified')
+                else:
+                    name = tokens.pop(0)
+                    client.db_drop(name)
             elif parsed['cmd'].startswith('create database'):
                 if client is None:
                     raise RuntimeError('no server accessed')

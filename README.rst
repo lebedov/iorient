@@ -50,11 +50,13 @@ One can also execute Gremlin queries using the ``-g`` option: ::
 Several special commands similar to those provided by the OrientDB console are
 also available: ::
 
-    %orient current server
-    %orient current database
-    %orient list databases
-    %orient list classes
     %orient create database foobar memory graph
+    %orient drop database foobar
+    %orient disconnect
+    %orient current database    
+    %orient current server
+    %orient list classes
+    %orient list databases
 
 Once at least one connection has been opened, specifying a query without a
 connection string will use the last used connection: ::
