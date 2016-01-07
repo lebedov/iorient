@@ -44,7 +44,8 @@ def orientrecord_to_dict(r):
         if isinstance(d, dict):
             out = {}
             for k in d:
-                out[k] = rec(d[k])
+                if not isinstance(d[k], OrientBinaryObject):
+                    out[k] = rec(d[k])
             return out
         elif _iterable(d) and not isinstance(d, basestring):            
             return d.__class__(map(rec, 
