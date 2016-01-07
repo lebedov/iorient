@@ -25,22 +25,47 @@ import prettytable
 import pyorient
 import truncate
 
+def _iterable(x):
+    try:
+        iter(x)
+    except:
+        return False
+    else:
+        return True
+
 def orientrecord_to_dict(r):
     """
     Convert a pyorient.otypes.OrientRecord into a dict.
     """
 
+    # Recurse into dictionary replacing OrientRecordLink objects with their RIDs
+    # and removing OrientBinaryObjects:
+    def rec(d):
+        if isinstance(d, dict):
+            out = {}
+            for k in d:
+                out[k] = rec(d[k])
+            return out
+        elif _iterable(d):            
+            return d.__class__(map(rec, 
+                [x for x in d if not isinstance(d, OrientBinaryObject)]))
+        elif isinstance(d, OrientRecordLink):
+            return d.get_hash()
+        elif isinstance(d, OrientBinaryObject):
+
+            # This should never be reached:
+            return None
+        else:
+            return d
+
     out = {}
     out['class'] = r._class
     out['rid'] = r._rid
     out['version'] = r._version
-    storage = {}
     if r.oRecordData:
-        for k in r.oRecordData:
-            if isinstance(r.oRecordData[k], OrientRecordLink):
-                storage[k] = r.oRecordData[k].get_hash()
-            else:
-                storage[k] = r.oRecordData[k]
+        storage = rec(r.oRecordData)
+    else:
+        storage = {}
     out['storage'] = storage
     return out
 
