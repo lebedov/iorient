@@ -46,7 +46,7 @@ def orientrecord_to_dict(r):
             for k in d:
                 out[k] = rec(d[k])
             return out
-        elif _iterable(d):            
+        elif _iterable(d) and not isinstance(d, basestring):            
             return d.__class__(map(rec, 
                 [x for x in d if not isinstance(d, OrientBinaryObject)]))
         elif isinstance(d, OrientRecordLink):
