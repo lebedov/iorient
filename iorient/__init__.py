@@ -47,8 +47,8 @@ def orientrecord_to_dict(r):
                 if not isinstance(d[k], OrientBinaryObject):
                     out[k] = rec(d[k])
             return out
-        elif _iterable(d) and not isinstance(d, basestring):            
-            return d.__class__(map(rec, 
+        elif _iterable(d) and not isinstance(d, basestring):
+            return d.__class__(map(rec,
                 [x for x in d if not isinstance(d, OrientBinaryObject)]))
         elif isinstance(d, OrientRecordLink):
             return d.get_hash()
@@ -230,22 +230,22 @@ class OrientMagic(Magics, Configurable):
 
         Multiple database connections are supported. Once a connection has been
         established, it can be used by specifying its user@server/dbname. A
-        separate database-independent connection to the server is maintained to 
+        separate database-independent connection to the server is maintained to
         permit server-specific commands without having to subsequently reconnect
         to the currently open database. If no connect string is specified after
         at least one connection has been established, the most recently used
         connection will be used to execute the query.
 
-        Queries are assumed to be in OrientDB SQL. Gremlin queries may be run by 
-        specifying the '-g' option. Several special commands similar to those 
+        Queries are assumed to be in OrientDB SQL. Gremlin queries may be run by
+        specifying the '-g' option. Several special commands similar to those
         provided by the OrientDB console (such as 'list databases',
         'list classes', etc.) are also recognized.
 
         Query results are returned as a list of dictionaries. Specifying the
-        options '-j' or '-t N' (where 'N' is an integer) will respectively print 
+        options '-j' or '-t N' (where 'N' is an integer) will respectively print
         the results in JSON or tabular format (with a maximum field width of 'N'
         characters) rather than returning them.
-        
+
         Examples
         --------
         %orient user:passwd@server/dbname
@@ -298,7 +298,7 @@ class OrientMagic(Magics, Configurable):
             self.last_db_key = db_key
         else:
             db_key = self.last_db_key
-        
+
         if client_key in self.clients:
             client = self.clients[client_key]
         elif client_key:
@@ -309,7 +309,7 @@ class OrientMagic(Magics, Configurable):
             client = None
 
         # If no database name is specified, don't try to connect to any database:
-        if db_key in self.db:            
+        if db_key in self.db:
             db_client = self.db[db_key]
         elif db_key:
             db_client = pyorient.OrientDB(parsed['server'], parsed['port'])
