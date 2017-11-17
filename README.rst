@@ -12,9 +12,6 @@ dialect and `Gremlin <https://gremlin.tinkerpop.com>`_.
 .. image:: https://img.shields.io/pypi/v/iorient.svg
     :target: https://pypi.python.org/pypi/iorient
     :alt: Latest Version
-.. image:: https://img.shields.io/pypi/dm/iorient.svg
-    :target: https://pypi.python.org/pypi/iorient
-    :alt: Downloads
 
 Installation
 ------------
